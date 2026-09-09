@@ -27,6 +27,7 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { generateWarmListenerSafeText } from "@/lib/ai/yunduo/generate-safe-reply";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -36,20 +37,36 @@ import {
   getMessagesByChatId,
   saveChat,
   saveMessages,
-  updateChatTitleById,
   updateMessage,
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
 import { checkIpRateLimit } from "@/lib/ratelimit";
+import {
+  assessCrisis,
+  MODERATE_CONTEXT_RULE,
+  SEVERE_CRISIS_RESPONSE,
+} from "@/lib/safety/crisis";
+import { handleSevereCrisis } from "@/lib/safety/crisis-handler";
 import type { ChatMessage, WaitingStatusData } from "@/lib/types";
-import { convertToUIMessages, generateUUID } from "@/lib/utils";
-import { generateTitleFromUserMessage } from "../../actions";
+import {
+  convertToUIMessages,
+  generateUUID,
+  getTextFromMessage,
+} from "@/lib/utils";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
 
 const HEALTH_CHECK_DELAY_MS = 9000;
+
+function createChatTitleFromText(text: string) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length === 0) {
+    return "New chat";
+  }
+  return normalized.length > 24 ? `${normalized.slice(0, 24)}…` : normalized;
+}
 
 function isModelStreamActivity(chunk: { type: string }) {
   return !["start", "start-step", "finish-step", "finish", "raw"].includes(
@@ -112,10 +129,12 @@ export async function POST(request: Request) {
     }
 
     const isToolApprovalFlow = Boolean(messages);
+    const currentUserText =
+      message?.role === "user" ? getTextFromMessage(message) : "";
+    const crisisAssessment = assessCrisis(currentUserText);
 
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
-    let titlePromise: Promise<string> | null = null;
 
     if (chat) {
       if (chat.userId !== session.user.id) {
@@ -125,11 +144,13 @@ export async function POST(request: Request) {
     } else if (message?.role === "user") {
       await saveChat({
         id,
-        title: "New chat",
+        title:
+          crisisAssessment.level === "severe"
+            ? "危机对话"
+            : createChatTitleFromText(currentUserText),
         userId: session.user.id,
         visibility: selectedVisibilityType,
       });
-      titlePromise = generateTitleFromUserMessage({ message });
     }
 
     let uiMessages: ChatMessage[];
@@ -233,6 +254,83 @@ export async function POST(request: Request) {
           });
         };
 
+        const writeAssistantText = (text: string) => {
+          const assistantMessageId = generateUUID();
+          const textPartId = generateUUID();
+
+          dataStream.write({ messageId: assistantMessageId, type: "start" });
+          dataStream.write({ type: "start-step" });
+          dataStream.write({ id: textPartId, type: "text-start" });
+          dataStream.write({
+            delta: text,
+            id: textPartId,
+            type: "text-delta",
+          });
+          dataStream.write({ id: textPartId, type: "text-end" });
+          dataStream.write({ type: "finish-step" });
+          dataStream.write({ finishReason: "stop", type: "finish" });
+        };
+
+        if (crisisAssessment.level === "severe") {
+          writeWaitingStatus("waiting", "Waiting...");
+          after(async () => {
+            try {
+              await handleSevereCrisis({
+                chatId: id,
+                matchedRuleIds: crisisAssessment.matchedRuleIds,
+                messageText: currentUserText,
+                userId: session.user.id,
+              });
+            } catch (error) {
+              console.error("[yunduo-crisis-event] 记录或告警失败", error);
+            }
+          });
+          writeAssistantText(SEVERE_CRISIS_RESPONSE);
+          return;
+        }
+
+        if (!supportsTools) {
+          writeWaitingStatus("waiting", "Waiting...");
+          hasModelActivity = true;
+          writeWaitingStatus("thinking", "Thinking...");
+
+          const baseInstructions = systemPrompt({
+            requestHints,
+            supportsTools,
+          });
+          const instructions =
+            crisisAssessment.level === "moderate"
+              ? `${baseInstructions}\n\n${MODERATE_CONTEXT_RULE}`
+              : baseInstructions;
+
+          const safeReply = await generateWarmListenerSafeText({
+            instructions,
+            messages: modelMessages,
+            model: getLanguageModel(chatModel),
+          });
+
+          if (safeReply.risk === "HIGH") {
+            after(async () => {
+              try {
+                await handleSevereCrisis({
+                  chatId: id,
+                  matchedRuleIds: ["llm-implicit-severe"],
+                  messageText: currentUserText,
+                  userId: session.user.id,
+                });
+              } catch (error) {
+                console.error("[yunduo-crisis-event] 记录或告警失败", error);
+              }
+            });
+            writeAssistantText(SEVERE_CRISIS_RESPONSE);
+            return;
+          }
+
+          writeAssistantText(safeReply.text);
+
+          return;
+        }
+
         writeWaitingStatus("waiting", "Waiting...");
 
         healthCheckTimer = setTimeout(() => {
@@ -334,16 +432,6 @@ export async function POST(request: Request) {
             stream: result.stream,
           })
         );
-
-        if (titlePromise) {
-          try {
-            const title = await titlePromise;
-            dataStream.write({ data: title, type: "data-chat-title" });
-            updateChatTitleById({ chatId: id, title });
-          } catch {
-            /* non-fatal */
-          }
-        }
       },
       generateId: generateUUID,
       onEnd: async ({ messages: finishedMessages }) => {
