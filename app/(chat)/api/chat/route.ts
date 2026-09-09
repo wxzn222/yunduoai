@@ -28,6 +28,10 @@ import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
 import { generateWarmListenerSafeText } from "@/lib/ai/yunduo/generate-safe-reply";
+import {
+  buildLateNightModeRule,
+  isLateNightShanghai,
+} from "@/lib/ai/yunduo/late-night";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -132,6 +136,8 @@ export async function POST(request: Request) {
     const currentUserText =
       message?.role === "user" ? getTextFromMessage(message) : "";
     const crisisAssessment = assessCrisis(currentUserText);
+    const isLateNight =
+      process.env.LATE_NIGHT_FORCE === "1" || isLateNightShanghai(new Date());
 
     const chat = await getChatById({ id });
     let messagesFromDb: DBMessage[] = [];
@@ -302,9 +308,12 @@ export async function POST(request: Request) {
             crisisAssessment.level === "moderate"
               ? `${baseInstructions}\n\n${MODERATE_CONTEXT_RULE}`
               : baseInstructions;
+          const instructionsWithLateNight = isLateNight
+            ? `${instructions}\n\n${buildLateNightModeRule()}`
+            : instructions;
 
           const safeReply = await generateWarmListenerSafeText({
-            instructions,
+            instructions: instructionsWithLateNight,
             messages: modelMessages,
             model: getLanguageModel(chatModel),
           });
@@ -364,6 +373,13 @@ export async function POST(request: Request) {
           clearHealthCheckTimer();
         };
 
+        const toolInstructions = isLateNight
+          ? `${systemPrompt({
+              requestHints,
+              supportsTools,
+            })}\n\n${buildLateNightModeRule()}`
+          : systemPrompt({ requestHints, supportsTools });
+
         const result = streamText({
           activeTools:
             isReasoningModel && !supportsTools
@@ -375,7 +391,7 @@ export async function POST(request: Request) {
                   "updateDocument",
                   "requestSuggestions",
                 ],
-          instructions: systemPrompt({ requestHints, supportsTools }),
+          instructions: toolInstructions,
           messages: modelMessages,
           model: getLanguageModel(chatModel),
           onAbort() {
