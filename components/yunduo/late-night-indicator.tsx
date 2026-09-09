@@ -5,11 +5,16 @@ import { useEffect, useState } from "react";
 import { isLateNightShanghai } from "@/lib/ai/yunduo/late-night";
 
 export function LateNightIndicator() {
-  const [isLateNight, setIsLateNight] = useState(false);
+  const [isLateNight, setIsLateNight] = useState(
+    () => process.env.NEXT_PUBLIC_LATE_NIGHT_FORCE === "1"
+  );
 
   useEffect(() => {
     const update = () => {
-      setIsLateNight(isLateNightShanghai(new Date()));
+      setIsLateNight(
+        process.env.NEXT_PUBLIC_LATE_NIGHT_FORCE === "1" ||
+          isLateNightShanghai(new Date())
+      );
     };
 
     update();

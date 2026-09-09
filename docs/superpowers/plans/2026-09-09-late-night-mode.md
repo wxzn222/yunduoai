@@ -13,7 +13,7 @@
 - 时间固定 Asia/Shanghai；深夜窗口 22:00（含）至次日 06:00（不含）。
 - 重度危机固定话术、危机事件与钉钉告警不因深夜模式改变。
 - 用户界面新增文案必须为：“深夜陪伴中 · 我在，慢慢说”。
-- `LATE_NIGHT_FORCE=1` 仅用于本地验收，默认关闭，不影响线上行为。
+- `LATE_NIGHT_FORCE=1`（服务端）与 `NEXT_PUBLIC_LATE_NIGHT_FORCE=1`（前端标识）仅用于本地验收，默认关闭，不影响线上行为。
 - 不打印、不展示任何 API key / 钉钉 token。
 
 ## File Structure
@@ -244,11 +244,16 @@ import { useEffect, useState } from "react";
 import { isLateNightShanghai } from "@/lib/ai/yunduo/late-night";
 
 export function LateNightIndicator() {
-  const [isLateNight, setIsLateNight] = useState(false);
+  const [isLateNight, setIsLateNight] = useState(
+    () => process.env.NEXT_PUBLIC_LATE_NIGHT_FORCE === "1"
+  );
 
   useEffect(() => {
     const update = () => {
-      setIsLateNight(isLateNightShanghai(new Date()));
+      setIsLateNight(
+        process.env.NEXT_PUBLIC_LATE_NIGHT_FORCE === "1" ||
+          isLateNightShanghai(new Date())
+      );
     };
 
     update();
@@ -347,7 +352,7 @@ git commit -m "feat: 深夜模式规则注入与输入区标识"
 停止当前 dev server，然后用：
 
 ```bash
-$env:LATE_NIGHT_FORCE="1"; corepack pnpm dev
+$env:LATE_NIGHT_FORCE="1"; $env:NEXT_PUBLIC_LATE_NIGHT_FORCE="1"; corepack pnpm dev
 ```
 
 重启（仅本地验收；线上默认不设该变量）。
