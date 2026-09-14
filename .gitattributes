@@ -1,0 +1,21 @@
+# 统一换行符为 LF（Unix 风格）。
+#
+# 不这么做的后果（都是实际踩过的）：
+#   1. scripts/deploy-remote.sh 被签出成 Windows 换行符，传到服务器后
+#      /bin/bash 报 "bad interpreter: /bin/bash^M"，部署直接失败；
+#   2. 项目的代码检查工具（Biome）要求 LF，看到 CRLF 会报上百处格式错误，
+#      导致提交前的自动检查永远通不过。
+* text=auto eol=lf
+
+# 二进制文件不做换行符转换
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.gz binary
+*.zip binary

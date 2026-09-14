@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  assessCrisis,
-  SEVERE_CRISIS_RESPONSE,
-} from "../../lib/safety/crisis";
+import { assessCrisis, SEVERE_CRISIS_RESPONSE } from "../../lib/safety/crisis";
 
 test("普通负面情绪不会被误判为危机", () => {
   const assessment = assessCrisis("今天有点烦，跟室友闹得不开心");

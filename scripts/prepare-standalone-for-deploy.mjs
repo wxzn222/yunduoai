@@ -14,7 +14,9 @@ import path from "node:path";
 const standaloneDir = process.argv[2];
 
 if (!standaloneDir || !fs.existsSync(standaloneDir)) {
-  console.error("用法: node prepare-standalone-for-deploy.mjs <standalone 目录>");
+  console.error(
+    "用法: node prepare-standalone-for-deploy.mjs <standalone 目录>"
+  );
   process.exit(1);
 }
 

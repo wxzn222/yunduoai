@@ -29,7 +29,7 @@ export function IdentityNotice() {
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog onOpenChange={setOpen} open={open}>
       <AlertDialogContent data-testid="identity-notice">
         <AlertDialogHeader>
           <AlertDialogTitle>你好，我是云朵</AlertDialogTitle>

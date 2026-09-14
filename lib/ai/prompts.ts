@@ -68,11 +68,8 @@ export const systemPrompt = ({
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
-}) => {
-  return supportsTools
-    ? `${regularPrompt}\n\n${artifactsPrompt}`
-    : regularPrompt;
-};
+}) =>
+  supportsTools ? `${regularPrompt}\n\n${artifactsPrompt}` : regularPrompt;
 
 export const codePrompt = `
 You are a code generator that creates self-contained, executable code snippets. When writing code:

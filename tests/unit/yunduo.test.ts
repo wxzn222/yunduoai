@@ -1,11 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
-import { buildWarmListenerSystemPrompt } from "../../lib/ai/yunduo/persona";
 import {
   detectWarmListenerViolations,
   type WarmListenerViolationKind,
 } from "../../lib/ai/yunduo/guardrails";
+import { buildWarmListenerSystemPrompt } from "../../lib/ai/yunduo/persona";
 
 test("温暖倾听者系统 Prompt 包含身份边界", () => {
   const prompt = buildWarmListenerSystemPrompt();

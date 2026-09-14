@@ -14,8 +14,7 @@ export function isSecureRequest(request: {
 }): boolean {
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const protocol = (
-    forwardedProto?.split(",")[0] ??
-    new URL(request.url).protocol
+    forwardedProto?.split(",")[0] ?? new URL(request.url).protocol
   )
     .trim()
     .replace(/:$/, "");

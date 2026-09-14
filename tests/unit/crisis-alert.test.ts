@@ -3,8 +3,8 @@ import test from "node:test";
 
 import {
   buildCrisisAlertPayload,
-  notifyCrisisAlert,
   type CrisisAlertEvent,
+  notifyCrisisAlert,
 } from "../../lib/safety/crisis-alert";
 
 const sampleEvent: CrisisAlertEvent = {
@@ -82,12 +82,14 @@ test("钉钉返回 HTTP 200 但 errcode 非 0 时判定为发送失败", async (
   process.env.CRISIS_ALERT_WEBHOOK_URL =
     "https://oapi.dingtalk.com/robot/send?access_token=test-token";
 
-  const result = await notifyCrisisAlert(sampleEvent, async () => {
-    return new Response(
-      JSON.stringify({ errcode: 310000, errmsg: "keywords not in content" }),
-      { status: 200 }
-    );
-  });
+  const result = await notifyCrisisAlert(
+    sampleEvent,
+    async () =>
+      new Response(
+        JSON.stringify({ errcode: 310_000, errmsg: "keywords not in content" }),
+        { status: 200 }
+      )
+  );
 
   if (previousUrl === undefined) {
     delete process.env.CRISIS_ALERT_WEBHOOK_URL;

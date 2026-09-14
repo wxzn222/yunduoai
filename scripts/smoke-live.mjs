@@ -18,7 +18,7 @@ const iphoneUserAgent =
 const browser = await chromium.launch();
 const context = await browser.newContext({
   userAgent: iphoneUserAgent,
-  viewport: { width: 390, height: 844 },
+  viewport: { height: 844, width: 390 },
 });
 const page = await context.newPage();
 
@@ -39,7 +39,7 @@ page.on("pageerror", (error) => {
 });
 
 console.log(`打开 ${target}`);
-await page.goto(target, { waitUntil: "domcontentloaded", timeout: 60_000 });
+await page.goto(target, { timeout: 60_000, waitUntil: "domcontentloaded" });
 await page.waitForTimeout(3000);
 
 const acknowledge = page.getByRole("button", { name: "我知道了" });
@@ -73,7 +73,9 @@ const lines = reply
   .map((line) => line.trim())
   .filter((line) => line.length > 1 && line !== "Edit" && line !== "Copy");
 
-console.log(`\n发出去的 POST 请求：${postRequests.length ? postRequests.join("、") : "一条都没有"}`);
+console.log(
+  `\n发出去的 POST 请求：${postRequests.length ? postRequests.join("、") : "一条都没有"}`
+);
 console.log(`页面最后几行：\n${lines.slice(-6).join("\n")}`);
 if (problems.length) {
   console.log(`\n浏览器报错：\n${problems.join("\n")}`);

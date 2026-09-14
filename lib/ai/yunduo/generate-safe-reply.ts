@@ -5,6 +5,7 @@ import {
   type CrisisRiskLevel,
   parseCrisisRiskTag,
 } from "../../safety/crisis-screening";
+import { qwenNoThinking } from "../qwen-options";
 import {
   detectWarmListenerViolations,
   type WarmListenerViolation,
@@ -39,7 +40,9 @@ export async function generateWarmListenerSafeText({
 }> {
   const callGenerate: GenerateTextLike =
     generateImpl ??
-    (async (args) => ({ text: (await generateText(args)).text ?? "" }));
+    (async (args) => ({
+      text: (await generateText({ ...args, ...qwenNoThinking })).text ?? "",
+    }));
   const finalInstructions = `${instructions}\n\n${buildCrisisScreeningSuffix()}`;
 
   let violations: WarmListenerViolation[] = [];

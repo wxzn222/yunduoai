@@ -6,10 +6,22 @@ export type CrisisAssessment = {
 };
 
 const severeRules: Array<{ id: string; pattern: RegExp }> = [
-  { id: "suicide-wish", pattern: /不想活(?:了|下去)?|不想(?:再)?(?:活着|活下去|醒来)/ },
-  { id: "suicide-intent", pattern: /(?:想|要|准备)(?:去)?自杀|自杀了|正在自杀/ },
-  { id: "self-harm-action", pattern: /割腕|跳楼|上吊|安眠药|吞药|结束(?:自己)?(?:的)?生命/ },
-  { id: "suicide-plan", pattern: /(?:已经|正在|计划好|准备好).{0,8}(?:自杀|结束生命|离开这个世界)/ },
+  {
+    id: "suicide-wish",
+    pattern: /不想活(?:了|下去)?|不想(?:再)?(?:活着|活下去|醒来)/,
+  },
+  {
+    id: "suicide-intent",
+    pattern: /(?:想|要|准备)(?:去)?自杀|自杀了|正在自杀/,
+  },
+  {
+    id: "self-harm-action",
+    pattern: /割腕|跳楼|上吊|安眠药|吞药|结束(?:自己)?(?:的)?生命/,
+  },
+  {
+    id: "suicide-plan",
+    pattern: /(?:已经|正在|计划好|准备好).{0,8}(?:自杀|结束生命|离开这个世界)/,
+  },
 ];
 
 const moderateRules: Array<{ id: string; pattern: RegExp }> = [
@@ -23,7 +35,8 @@ const moderateRules: Array<{ id: string; pattern: RegExp }> = [
   },
   {
     id: "persistent-sadness",
-    pattern: /(?:总是|一直|动不动就|经常)想哭|情绪(?:一直|最近|总是)(?:很低落|不好|很差)/,
+    pattern:
+      /(?:总是|一直|动不动就|经常)想哭|情绪(?:一直|最近|总是)(?:很低落|不好|很差)/,
   },
   {
     id: "hopelessness",

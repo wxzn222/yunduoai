@@ -53,8 +53,8 @@ export async function notifyCrisisAlert(
 
     if (!response.ok) {
       console.error("[yunduo-crisis-alert] Webhook 发送失败", {
-        status: response.status,
         eventId: event.id,
+        status: response.status,
       });
       return { channel: "console", ok: false };
     }

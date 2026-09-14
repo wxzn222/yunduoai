@@ -1,5 +1,5 @@
-import { customProvider, gateway } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { customProvider, gateway } from "ai";
 import { isTestEnvironment } from "../constants";
 import { titleModel } from "./models";
 

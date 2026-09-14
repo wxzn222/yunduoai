@@ -4,7 +4,10 @@ const CHAT_URL_REGEX = /\/chat\/[\w-]+/;
 const INPUT_TEST_ID = "multimodal-input";
 const SEND_TEST_ID = "send-button";
 
-async function sendChatMessage(page: import("@playwright/test").Page, text: string) {
+async function sendChatMessage(
+  page: import("@playwright/test").Page,
+  text: string
+) {
   await dismissIdentityNotice(page);
   const input = page.getByTestId(INPUT_TEST_ID);
   await input.fill(text);
@@ -15,7 +18,7 @@ async function sendChatMessage(page: import("@playwright/test").Page, text: stri
 async function dismissIdentityNotice(page: import("@playwright/test").Page) {
   const button = page.getByRole("button", { name: "我知道了" });
   try {
-    await expect(button).toBeVisible({ timeout: 5_000 });
+    await expect(button).toBeVisible({ timeout: 5000 });
     await button.click();
     await expect(button).toBeHidden();
   } catch {
@@ -31,7 +34,9 @@ async function waitForAssistantReply(page: import("@playwright/test").Page) {
       async () => {
         const text = ((await assistant.textContent()) ?? "").trim();
         return (
-          text.length > 5 && !/^Waiting\.{3}$/.test(text) && !/^Thinking\.{3}$/.test(text)
+          text.length > 5 &&
+          !/^Waiting\.{3}$/.test(text) &&
+          !/^Thinking\.{3}$/.test(text)
         );
       },
       { timeout: 120_000 }
@@ -87,10 +92,7 @@ test.describe("AI 云朵 MVP 冒烟测试", () => {
   }) => {
     await page.goto("/");
 
-    await sendChatMessage(
-      page,
-      "我今天压力很大，觉得有点撑不住，想找个人说说"
-    );
+    await sendChatMessage(page, "我今天压力很大，觉得有点撑不住，想找个人说说");
 
     const assistant = await waitForAssistantReply(page);
     const replyText = ((await assistant.textContent()) ?? "").replace(
@@ -158,7 +160,7 @@ test.describe("AI 云朵 MVP 冒烟测试", () => {
   });
 
   test("移动端宽度下也能发送消息", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    await page.setViewportSize({ height: 844, width: 390 });
     await page.goto("/");
 
     await expect(page.getByTestId(INPUT_TEST_ID)).toBeVisible();
