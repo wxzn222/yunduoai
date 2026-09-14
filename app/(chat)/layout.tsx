@@ -6,6 +6,7 @@ import { AppSidebar } from "@/components/chat/app-sidebar";
 import { DataStreamProvider } from "@/components/chat/data-stream-provider";
 import { ChatShell } from "@/components/chat/shell";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { IdentityNotice } from "@/components/yunduo/identity-notice";
 import { ActiveChatProvider } from "@/hooks/use-active-chat";
 import { auth } from "../(auth)/auth";
 
@@ -31,6 +32,7 @@ async function SidebarShell({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen={!isCollapsed}>
+      <IdentityNotice />
       <AppSidebar user={session?.user} />
       <SidebarInset>
         <Toaster

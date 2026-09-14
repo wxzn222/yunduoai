@@ -21,8 +21,10 @@ import { generateUUID } from "../utils";
 import {
   type Chat,
   chat,
+  crisisEvent,
   type DBMessage,
   document,
+  memorySummary,
   message,
   type Suggestion,
   stream,
@@ -70,6 +72,32 @@ export async function createGuestUser() {
   }
 }
 
+export async function createCrisisEvent({
+  chatId,
+  matchedRuleIds,
+  messageText,
+  userId,
+}: {
+  chatId: string;
+  matchedRuleIds: string[];
+  messageText: string;
+  userId: string;
+}) {
+  try {
+    return await db
+      .insert(crisisEvent)
+      .values({
+        chatId,
+        matchedRuleIds,
+        messageText,
+        userId,
+      })
+      .returning();
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
 export async function saveChat({
   id,
   userId,
@@ -99,6 +127,8 @@ export async function saveChat({
 export async function deleteChatById({ id }: { id: string }) {
   try {
     await db.delete(vote).where(eq(vote.chatId, id));
+    await db.delete(memorySummary).where(eq(memorySummary.chatId, id));
+    await db.delete(crisisEvent).where(eq(crisisEvent.chatId, id));
     await db.delete(message).where(eq(message.chatId, id));
     await db.delete(stream).where(eq(stream.chatId, id));
 
@@ -126,6 +156,10 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
     const chatIds = userChats.map((c) => c.id);
 
     await db.delete(vote).where(inArray(vote.chatId, chatIds));
+    await db
+      .delete(memorySummary)
+      .where(inArray(memorySummary.chatId, chatIds));
+    await db.delete(crisisEvent).where(inArray(crisisEvent.chatId, chatIds));
     await db.delete(message).where(inArray(message.chatId, chatIds));
     await db.delete(stream).where(inArray(stream.chatId, chatIds));
 
@@ -235,6 +269,58 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
     throw new ChatbotError("bad_request:database", {
       cause: error,
     });
+  }
+}
+
+export async function upsertMemorySummary({
+  chatId,
+  isSensitive,
+  summary,
+  userId,
+}: {
+  chatId: string;
+  isSensitive: boolean;
+  summary: string;
+  userId: string;
+}) {
+  try {
+    const now = new Date();
+    const [savedMemory] = await db
+      .insert(memorySummary)
+      .values({
+        chatId,
+        createdAt: now,
+        isSensitive,
+        summary,
+        updatedAt: now,
+        userId,
+      })
+      .onConflictDoUpdate({
+        set: { isSensitive, summary, updatedAt: now, userId },
+        target: memorySummary.chatId,
+      })
+      .returning();
+    return savedMemory;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getLatestMemorySummaryByUserId({
+  userId,
+}: {
+  userId: string;
+}) {
+  try {
+    const [latestMemory] = await db
+      .select()
+      .from(memorySummary)
+      .where(eq(memorySummary.userId, userId))
+      .orderBy(desc(memorySummary.updatedAt))
+      .limit(1);
+    return latestMemory ?? null;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
   }
 }
 

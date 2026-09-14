@@ -1,11 +1,10 @@
-export const DEFAULT_CHAT_MODEL = "moonshotai/kimi-k2.5";
+export const DEFAULT_CHAT_MODEL = "qwen/qwen3.7-plus";
 
 export const titleModel = {
-  description: "Fast model for title generation",
-  gatewayOrder: ["fireworks", "bedrock"],
-  id: "moonshotai/kimi-k2.5",
-  name: "Kimi K2.5",
-  provider: "moonshotai",
+  description: "Qwen model for chat title generation",
+  id: DEFAULT_CHAT_MODEL,
+  name: "Qwen3.7 Plus",
+  provider: "qwen",
 };
 
 export type ModelCapabilities = {
@@ -25,85 +24,25 @@ export type ChatModel = {
 
 export const chatModels: ChatModel[] = [
   {
-    description: "Fast and capable model with tool use",
-    gatewayOrder: ["bedrock", "deepinfra"],
-    id: "deepseek/deepseek-v3.2",
-    name: "DeepSeek V3.2",
-    provider: "deepseek",
-  },
-  {
-    description: "Moonshot AI flagship model",
-    gatewayOrder: ["fireworks", "bedrock"],
-    id: "moonshotai/kimi-k2.5",
-    name: "Kimi K2.5",
-    provider: "moonshotai",
-  },
-  {
-    description: "Compact reasoning model",
-    gatewayOrder: ["groq", "bedrock"],
-    id: "openai/gpt-oss-20b",
-    name: "GPT OSS 20B",
-    provider: "openai",
-    reasoningEffort: "low",
-  },
-  {
-    description: "Open-source 120B parameter model",
-    gatewayOrder: ["fireworks", "bedrock"],
-    id: "openai/gpt-oss-120b",
-    name: "GPT OSS 120B",
-    provider: "openai",
-    reasoningEffort: "low",
-  },
-  {
-    description: "Fast non-reasoning model with tool use",
-    gatewayOrder: ["xai"],
-    id: "xai/grok-4.1-fast-non-reasoning",
-    name: "Grok 4.1 Fast",
-    provider: "xai",
+    description: "Qwen model for AI Yun Duo chat",
+    id: DEFAULT_CHAT_MODEL,
+    name: "Qwen3.7 Plus",
+    provider: "qwen",
   },
 ];
+
+const qwenCapabilities: ModelCapabilities = {
+  reasoning: false,
+  tools: false,
+  vision: false,
+};
 
 export async function getCapabilities(): Promise<
   Record<string, ModelCapabilities>
 > {
-  const results = await Promise.all(
-    chatModels.map(async (model) => {
-      try {
-        const res = await fetch(
-          `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
-          { next: { revalidate: 86_400 } }
-        );
-        if (!res.ok) {
-          return [model.id, { reasoning: false, tools: false, vision: false }];
-        }
-
-        const json = await res.json();
-        const endpoints = json.data?.endpoints ?? [];
-        const params = new Set(
-          endpoints.flatMap(
-            (e: { supported_parameters?: string[] }) =>
-              e.supported_parameters ?? []
-          )
-        );
-        const inputModalities = new Set(
-          json.data?.architecture?.input_modalities ?? []
-        );
-
-        return [
-          model.id,
-          {
-            reasoning: params.has("reasoning"),
-            tools: params.has("tools"),
-            vision: inputModalities.has("image"),
-          },
-        ];
-      } catch {
-        return [model.id, { reasoning: false, tools: false, vision: false }];
-      }
-    })
-  );
-
-  return Object.fromEntries(results);
+  return {
+    [DEFAULT_CHAT_MODEL]: qwenCapabilities,
+  };
 }
 
 export const isDemo = process.env.IS_DEMO === "1";
@@ -206,24 +145,9 @@ export async function getModelAvailability(
     return "unknown";
   }
 
-  try {
-    const res = await fetch(
-      `https://ai-gateway.vercel.sh/v1/models/${model.id}/endpoints`,
-      { next: { revalidate: 60 } }
-    );
-    if (!res.ok) {
-      return "unknown";
-    }
-
-    const json = await res.json();
-    const endpoints = (json.data?.endpoints ?? []) as GatewayEndpoint[];
-
-    if (endpoints.length === 0) {
-      return "unknown";
-    }
-
-    return endpoints.some(isEndpointImpacted) ? "impacted" : "healthy";
-  } catch {
-    return "unknown";
+  if (model.provider === "qwen") {
+    return "healthy";
   }
+
+  return "unknown";
 }

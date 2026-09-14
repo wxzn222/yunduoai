@@ -32,16 +32,23 @@ import {
   buildLateNightModeRule,
   isLateNightShanghai,
 } from "@/lib/ai/yunduo/late-night";
+import {
+  buildConversationMemory,
+  getShortTermTurnLimit,
+  selectRecentConversationMessages,
+} from "@/lib/ai/yunduo/memory";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
   getChatById,
+  getLatestMemorySummaryByUserId,
   getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
   saveMessages,
   updateMessage,
+  upsertMemorySummary,
 } from "@/lib/db/queries";
 import type { DBMessage } from "@/lib/db/schema";
 import { ChatbotError } from "@/lib/errors";
@@ -70,6 +77,27 @@ function createChatTitleFromText(text: string) {
     return "New chat";
   }
   return normalized.length > 24 ? `${normalized.slice(0, 24)}…` : normalized;
+}
+
+async function refreshConversationMemory(chatId: string, userId: string) {
+  const storedMessages = await getMessagesByChatId({ id: chatId });
+  const memory = buildConversationMemory(
+    convertToUIMessages(storedMessages).map((storedMessage) => ({
+      role: storedMessage.role,
+      text: getTextFromMessage(storedMessage),
+    }))
+  );
+
+  if (!memory) {
+    return;
+  }
+
+  await upsertMemorySummary({
+    chatId,
+    isSensitive: memory.isSensitive,
+    summary: memory.summary,
+    userId,
+  });
 }
 
 function isModelStreamActivity(chunk: { type: string }) {
@@ -102,8 +130,11 @@ export async function POST(request: Request) {
     const { id, message, messages, selectedChatModel, selectedVisibilityType } =
       requestBody;
 
+    // Vercel BotId 依赖 Vercel 平台的校验服务，只在 Vercel 上才有意义。
+    // 自建服务器上调用它会得到永远无法通过的结果，并往日志里刷误导性的配置警告。
+    const isVercelDeployment = Boolean(process.env.VERCEL);
     const [botIdResult, session] = await Promise.all([
-      checkBotId().catch(() => null),
+      isVercelDeployment ? checkBotId().catch(() => null) : null,
       auth(),
     ]);
 
@@ -227,7 +258,18 @@ export async function POST(request: Request) {
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
 
-    const modelMessages = await convertToModelMessages(uiMessages);
+    const recentUiMessages = selectRecentConversationMessages(
+      uiMessages,
+      getShortTermTurnLimit()
+    );
+    const modelMessages = await convertToModelMessages(recentUiMessages);
+    const latestMemory = await getLatestMemorySummaryByUserId({
+      userId: session.user.id,
+    });
+    const memoryInstruction =
+      latestMemory && !latestMemory.isSensitive
+        ? `\n\n可用于保持连续性的非敏感长期摘要：${latestMemory.summary}\n只在当前话题相关时自然参考，不要声称记得用户未说过的内容，也不要主动追问身份信息。`
+        : "";
 
     const stream = createUIMessageStream({
       execute: async ({ writer: dataStream }) => {
@@ -300,10 +342,10 @@ export async function POST(request: Request) {
           hasModelActivity = true;
           writeWaitingStatus("thinking", "Thinking...");
 
-          const baseInstructions = systemPrompt({
+          const baseInstructions = `${systemPrompt({
             requestHints,
             supportsTools,
-          });
+          })}${memoryInstruction}`;
           const instructions =
             crisisAssessment.level === "moderate"
               ? `${baseInstructions}\n\n${MODERATE_CONTEXT_RULE}`
@@ -373,12 +415,13 @@ export async function POST(request: Request) {
           clearHealthCheckTimer();
         };
 
+        const baseToolInstructions = `${systemPrompt({
+          requestHints,
+          supportsTools,
+        })}${memoryInstruction}`;
         const toolInstructions = isLateNight
-          ? `${systemPrompt({
-              requestHints,
-              supportsTools,
-            })}\n\n${buildLateNightModeRule()}`
-          : systemPrompt({ requestHints, supportsTools });
+          ? `${baseToolInstructions}\n\n${buildLateNightModeRule()}`
+          : baseToolInstructions;
 
         const result = streamText({
           activeTools:
@@ -490,6 +533,12 @@ export async function POST(request: Request) {
               role: currentMessage.role,
             })),
           });
+        }
+
+        try {
+          await refreshConversationMemory(id, session.user.id);
+        } catch (error) {
+          console.error("[yunduo-memory] 摘要刷新失败", error);
         }
       },
       onError: (error) => {

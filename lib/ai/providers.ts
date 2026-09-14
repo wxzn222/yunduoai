@@ -1,6 +1,19 @@
 import { customProvider, gateway } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { isTestEnvironment } from "../constants";
 import { titleModel } from "./models";
+
+const qwenProvider = createOpenAICompatible({
+  apiKey: process.env.DASHSCOPE_API_KEY,
+  baseURL:
+    process.env.DASHSCOPE_BASE_URL ??
+    "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  name: "qwen",
+});
+
+function getQwenModelId(modelId: string) {
+  return modelId.startsWith("qwen/") ? modelId.slice("qwen/".length) : modelId;
+}
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -18,6 +31,10 @@ export const myProvider = isTestEnvironment
   : null;
 
 export function getLanguageModel(modelId: string) {
+  if (modelId.startsWith("qwen/")) {
+    return qwenProvider.languageModel(getQwenModelId(modelId));
+  }
+
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel(modelId);
   }
@@ -26,6 +43,10 @@ export function getLanguageModel(modelId: string) {
 }
 
 export function getTitleModel() {
+  if (titleModel.id.startsWith("qwen/")) {
+    return qwenProvider.languageModel(getQwenModelId(titleModel.id));
+  }
+
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }

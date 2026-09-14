@@ -3,6 +3,7 @@ import {
   boolean,
   foreignKey,
   json,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -38,6 +39,37 @@ export const chat = pgTable("Chat", {
 });
 
 export type Chat = InferSelectModel<typeof chat>;
+
+export const memorySummary = pgTable("MemorySummary", {
+  chatId: uuid("chatId")
+    .primaryKey()
+    .notNull()
+    .references(() => chat.id),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  isSensitive: boolean("isSensitive").notNull().default(false),
+  summary: text("summary").notNull(),
+  updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id),
+});
+
+export type MemorySummary = InferSelectModel<typeof memorySummary>;
+
+export const crisisEvent = pgTable("CrisisEvent", {
+  chatId: uuid("chatId")
+    .notNull()
+    .references(() => chat.id),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  matchedRuleIds: jsonb("matchedRuleIds").$type<string[]>().notNull(),
+  messageText: text("messageText").notNull(),
+  userId: uuid("userId")
+    .notNull()
+    .references(() => user.id),
+});
+
+export type CrisisEvent = InferSelectModel<typeof crisisEvent>;
 
 export const message = pgTable("Message_v2", {
   attachments: json("attachments").notNull(),
