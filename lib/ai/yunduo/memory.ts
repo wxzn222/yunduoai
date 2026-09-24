@@ -1,11 +1,76 @@
 import { assessCrisis } from "../../safety/crisis";
 
 export const DEFAULT_SHORT_TERM_TURNS = 8;
+export const CONVERSATION_COMPRESSION_TURNS = 20;
 
 type ConversationMessage = {
+  id?: string;
   role: string;
   text: string;
 };
+
+export type MemoryCompressionState = {
+  coveredTurns: number;
+  coveredToMessageId: string | null;
+};
+
+export function getCompletedTurnCount(messages: ConversationMessage[]): number {
+  let completedTurns = 0;
+  let hasUserMessage = false;
+
+  for (const message of messages) {
+    if (message.role === "user") {
+      hasUserMessage = true;
+      continue;
+    }
+    if (message.role === "assistant" && hasUserMessage) {
+      completedTurns += 1;
+      hasUserMessage = false;
+    }
+  }
+
+  return completedTurns;
+}
+
+export function shouldCompressConversation(
+  messages: ConversationMessage[],
+  previous: MemoryCompressionState | null
+): boolean {
+  const completedTurns = getCompletedTurnCount(messages);
+  if (!previous) {
+    return completedTurns >= CONVERSATION_COMPRESSION_TURNS;
+  }
+
+  return (
+    completedTurns - previous.coveredTurns >= CONVERSATION_COMPRESSION_TURNS
+  );
+}
+
+export function buildRollingSummaryInput({
+  messages,
+  previousCoveredToMessageId,
+  previousSummary,
+}: {
+  messages: ConversationMessage[];
+  previousCoveredToMessageId: string | null;
+  previousSummary: string;
+}): string {
+  const previousIndex = previousCoveredToMessageId
+    ? messages.findIndex((message) => message.id === previousCoveredToMessageId)
+    : -1;
+  const newMessages = messages.slice(previousIndex + 1);
+  const formattedMessages = newMessages
+    .map((message) => `${message.role}: ${message.text}`)
+    .join("\n");
+
+  return [
+    "已有会话摘要：",
+    previousSummary.trim(),
+    "",
+    "上次摘要之后新增的对话：",
+    formattedMessages,
+  ].join("\n");
+}
 
 const sensitiveMemoryPattern =
   /自伤|自残|自杀|不想活|结束生命|割腕|跳楼|上吊|吞药|安眠药|性侵|强奸|猥亵|家暴|虐待|我叫|名字是|住在|具体住址|身份证|学号|手机号|微信号|银行卡|密码/;

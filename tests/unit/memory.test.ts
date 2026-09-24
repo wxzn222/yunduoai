@@ -4,9 +4,52 @@ import test from "node:test";
 import {
   buildConversationMemory,
   buildOpeningMessage,
+  buildRollingSummaryInput,
+  getCompletedTurnCount,
   isSensitiveMemoryText,
   selectRecentConversationMessages,
+  shouldCompressConversation,
 } from "../../lib/ai/yunduo/memory";
+
+const makeTurns = (count: number) =>
+  Array.from({ length: count }, (_, index) => [
+    { id: `user-${index + 1}`, role: "user", text: `用户消息${index + 1}` },
+    {
+      id: `assistant-${index + 1}`,
+      role: "assistant",
+      text: `助手回复${index + 1}`,
+    },
+  ]).flat();
+
+test("只有完整的用户和助手消息对达到 20 轮才触发压缩", () => {
+  assert.equal(getCompletedTurnCount(makeTurns(19)), 19);
+  assert.equal(shouldCompressConversation(makeTurns(19), null), false);
+  assert.equal(getCompletedTurnCount(makeTurns(20)), 20);
+  assert.equal(shouldCompressConversation(makeTurns(20), null), true);
+});
+
+test("滚动压缩只在上次摘要之后新增 20 轮时触发", () => {
+  const previous = {
+    coveredToMessageId: "assistant-20",
+    coveredTurns: 20,
+  };
+  assert.equal(shouldCompressConversation(makeTurns(39), previous), false);
+  assert.equal(shouldCompressConversation(makeTurns(40), previous), true);
+});
+
+test("滚动摘要输入包含旧摘要和新增消息，不只压缩旧摘要", () => {
+  const messages = makeTurns(40);
+  const input = buildRollingSummaryInput({
+    messages,
+    previousCoveredToMessageId: "assistant-20",
+    previousSummary: "前 20 轮讨论了课程压力。",
+  });
+
+  assert.match(input, /前 20 轮讨论了课程压力/);
+  assert.match(input, /用户消息21/);
+  assert.match(input, /助手回复40/);
+  assert.doesNotMatch(input, /用户消息1\n/);
+});
 
 test("短期上下文只保留最近 N 个用户轮次", () => {
   const messages = [
