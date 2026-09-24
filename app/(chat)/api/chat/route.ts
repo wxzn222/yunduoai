@@ -28,15 +28,17 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { generateMemorySummary } from "@/lib/ai/yunduo/compress-memory";
 import { generateWarmListenerSafeText } from "@/lib/ai/yunduo/generate-safe-reply";
 import {
   buildLateNightModeRule,
   isLateNightShanghai,
 } from "@/lib/ai/yunduo/late-night";
 import {
-  buildConversationMemory,
+  buildRollingSummaryInput,
   getCompletedTurnCount,
   getShortTermTurnLimit,
+  isSensitiveMemoryText,
   selectRecentConversationMessages,
   shouldCompressConversation,
 } from "@/lib/ai/yunduo/memory";
@@ -82,7 +84,11 @@ function createChatTitleFromText(text: string) {
   return normalized.length > 24 ? `${normalized.slice(0, 24)}…` : normalized;
 }
 
-async function refreshConversationMemory(chatId: string, userId: string) {
+async function refreshConversationMemory(
+  chatId: string,
+  modelId: string,
+  userId: string
+) {
   const storedMessages = await getMessagesByChatId({ id: chatId });
   const messages = convertToUIMessages(storedMessages).map((storedMessage) => ({
     id: storedMessage.id,
@@ -130,25 +136,22 @@ async function refreshConversationMemory(chatId: string, userId: string) {
     ? messages.findIndex((message) => message.id === coveredToMessageId) + 1
     : messages.length;
   const coveredMessages = messages.slice(previousIndex + 1, coveredEndIndex);
-  const memory = buildConversationMemory(coveredMessages);
-
-  if (!memory) {
-    return;
-  }
-
-  const summary = previous
-    ? `${previous.summary.replace(/[。！？!?]+$/g, "")}；${memory.summary}`.slice(
-        0,
-        500
-      )
-    : memory.summary;
+  const summaryPrompt = buildRollingSummaryInput({
+    messages: coveredMessages,
+    previousCoveredToMessageId: null,
+    previousSummary: previous?.summary ?? "（暂无上一版摘要）",
+  });
+  const summary = await generateMemorySummary({
+    model: getLanguageModel(modelId),
+    prompt: summaryPrompt,
+  });
 
   await upsertMemorySummary({
     chatId,
     coveredFromMessageId: previous?.coveredToMessageId ?? messages[0]?.id,
     coveredToMessageId,
     coveredTurns: targetTurns,
-    isSensitive: memory.isSensitive,
+    isSensitive: isSensitiveMemoryText(summary),
     summary,
     userId,
     version: (previous?.version ?? 0) + 1,
@@ -590,7 +593,7 @@ export async function POST(request: Request) {
         }
 
         try {
-          await refreshConversationMemory(id, session.user.id);
+          await refreshConversationMemory(id, chatModel, session.user.id);
         } catch (error) {
           console.error("[yunduo-memory] 摘要刷新失败", error);
         }
