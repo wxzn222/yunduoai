@@ -2,6 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import {
   boolean,
   foreignKey,
+  integer,
   json,
   jsonb,
   pgTable,
@@ -45,13 +46,22 @@ export const memorySummary = pgTable("MemorySummary", {
     .primaryKey()
     .notNull()
     .references(() => chat.id),
+  coveredFromMessageId: uuid("coveredFromMessageId"),
+  coveredToMessageId: uuid("coveredToMessageId"),
+  coveredTurns: integer("coveredTurns").notNull().default(0),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   isSensitive: boolean("isSensitive").notNull().default(false),
+  status: varchar("status", {
+    enum: ["ready", "failed"],
+  })
+    .notNull()
+    .default("ready"),
   summary: text("summary").notNull(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   userId: uuid("userId")
     .notNull()
     .references(() => user.id),
+  version: integer("version").notNull().default(1),
 });
 
 export type MemorySummary = InferSelectModel<typeof memorySummary>;

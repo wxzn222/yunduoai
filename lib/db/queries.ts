@@ -274,14 +274,24 @@ export async function saveMessages({ messages }: { messages: DBMessage[] }) {
 
 export async function upsertMemorySummary({
   chatId,
+  coveredFromMessageId,
+  coveredToMessageId,
+  coveredTurns = 0,
   isSensitive,
   summary,
+  status = "ready",
   userId,
+  version,
 }: {
   chatId: string;
+  coveredFromMessageId?: string | null;
+  coveredToMessageId?: string | null;
+  coveredTurns?: number;
   isSensitive: boolean;
   summary: string;
+  status?: "ready" | "failed";
   userId: string;
+  version?: number;
 }) {
   try {
     const now = new Date();
@@ -289,14 +299,29 @@ export async function upsertMemorySummary({
       .insert(memorySummary)
       .values({
         chatId,
+        coveredFromMessageId: coveredFromMessageId ?? null,
+        coveredToMessageId: coveredToMessageId ?? null,
+        coveredTurns,
         createdAt: now,
         isSensitive,
+        status,
         summary,
         updatedAt: now,
         userId,
+        version: version ?? 1,
       })
       .onConflictDoUpdate({
-        set: { isSensitive, summary, updatedAt: now, userId },
+        set: {
+          coveredFromMessageId: coveredFromMessageId ?? null,
+          coveredToMessageId: coveredToMessageId ?? null,
+          coveredTurns,
+          isSensitive,
+          status,
+          summary,
+          updatedAt: now,
+          userId,
+          version: version ?? 1,
+        },
         target: memorySummary.chatId,
       })
       .returning();
@@ -319,6 +344,19 @@ export async function getLatestMemorySummaryByUserId({
       .orderBy(desc(memorySummary.updatedAt))
       .limit(1);
     return latestMemory ?? null;
+  } catch (error) {
+    throw new ChatbotError("bad_request:database", { cause: error });
+  }
+}
+
+export async function getMemorySummaryByChatId({ chatId }: { chatId: string }) {
+  try {
+    const [summary] = await db
+      .select()
+      .from(memorySummary)
+      .where(eq(memorySummary.chatId, chatId))
+      .limit(1);
+    return summary ?? null;
   } catch (error) {
     throw new ChatbotError("bad_request:database", { cause: error });
   }
