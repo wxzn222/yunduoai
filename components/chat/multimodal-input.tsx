@@ -112,6 +112,7 @@ function PureMultimodalInput({
   const router = useRouter();
   const { setTheme, resolvedTheme } = useTheme();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const submitLockRef = useRef(false);
   const { width } = useWindowSize();
   const hasAutoFocused = useRef(false);
   useEffect(() => {
@@ -227,6 +228,10 @@ function PureMultimodalInput({
   );
 
   const submitForm = useCallback(() => {
+    if (submitLockRef.current) {
+      return;
+    }
+    submitLockRef.current = true;
     window.history.pushState(
       {},
       "",
@@ -266,6 +271,12 @@ function PureMultimodalInput({
     width,
     chatId,
   ]);
+
+  useEffect(() => {
+    if (status === "ready" || status === "error") {
+      submitLockRef.current = false;
+    }
+  }, [status]);
 
   const uploadFile = useCallback(async (file: File) => {
     const formData = new FormData();
