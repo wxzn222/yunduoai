@@ -35,15 +35,17 @@ import {
 } from "@/lib/ai/yunduo/late-night";
 import {
   buildConversationMemory,
+  getCompletedTurnCount,
   getShortTermTurnLimit,
   selectRecentConversationMessages,
+  shouldCompressConversation,
 } from "@/lib/ai/yunduo/memory";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
   getChatById,
-  getLatestMemorySummaryByUserId,
+  getMemorySummaryByChatId,
   getMessageCountByUserId,
   getMessagesByChatId,
   saveChat,
@@ -82,22 +84,74 @@ function createChatTitleFromText(text: string) {
 
 async function refreshConversationMemory(chatId: string, userId: string) {
   const storedMessages = await getMessagesByChatId({ id: chatId });
-  const memory = buildConversationMemory(
-    convertToUIMessages(storedMessages).map((storedMessage) => ({
-      role: storedMessage.role,
-      text: getTextFromMessage(storedMessage),
-    }))
-  );
+  const messages = convertToUIMessages(storedMessages).map((storedMessage) => ({
+    id: storedMessage.id,
+    role: storedMessage.role,
+    text: getTextFromMessage(storedMessage),
+  }));
+  const previous = await getMemorySummaryByChatId({ chatId });
+
+  if (
+    !shouldCompressConversation(
+      messages,
+      previous
+        ? {
+            coveredToMessageId: previous.coveredToMessageId,
+            coveredTurns: previous.coveredTurns,
+          }
+        : null
+    )
+  ) {
+    return;
+  }
+
+  const completedTurns = getCompletedTurnCount(messages);
+  const targetTurns = previous
+    ? previous.coveredTurns + 20
+    : Math.min(completedTurns, 20);
+  let assistantCount = 0;
+  let coveredToMessageId: string | null = null;
+  for (const currentMessage of messages) {
+    if (currentMessage.role === "assistant") {
+      assistantCount += 1;
+      if (assistantCount === targetTurns) {
+        coveredToMessageId = currentMessage.id ?? null;
+        break;
+      }
+    }
+  }
+
+  const previousIndex = previous?.coveredToMessageId
+    ? messages.findIndex(
+        (message) => message.id === previous.coveredToMessageId
+      )
+    : -1;
+  const coveredEndIndex = coveredToMessageId
+    ? messages.findIndex((message) => message.id === coveredToMessageId) + 1
+    : messages.length;
+  const coveredMessages = messages.slice(previousIndex + 1, coveredEndIndex);
+  const memory = buildConversationMemory(coveredMessages);
 
   if (!memory) {
     return;
   }
 
+  const summary = previous
+    ? `${previous.summary.replace(/[。！？!?]+$/g, "")}；${memory.summary}`.slice(
+        0,
+        500
+      )
+    : memory.summary;
+
   await upsertMemorySummary({
     chatId,
+    coveredFromMessageId: previous?.coveredToMessageId ?? messages[0]?.id,
+    coveredToMessageId,
+    coveredTurns: targetTurns,
     isSensitive: memory.isSensitive,
-    summary: memory.summary,
+    summary,
     userId,
+    version: (previous?.version ?? 0) + 1,
   });
 }
 
@@ -264,9 +318,7 @@ export async function POST(request: Request) {
       getShortTermTurnLimit()
     );
     const modelMessages = await convertToModelMessages(recentUiMessages);
-    const latestMemory = await getLatestMemorySummaryByUserId({
-      userId: session.user.id,
-    });
+    const latestMemory = await getMemorySummaryByChatId({ chatId: id });
     const memoryInstruction =
       latestMemory && !latestMemory.isSensitive
         ? `\n\n可用于保持连续性的非敏感长期摘要：${latestMemory.summary}\n只在当前话题相关时自然参考，不要声称记得用户未说过的内容，也不要主动追问身份信息。`
