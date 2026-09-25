@@ -61,6 +61,18 @@ export async function generateWarmListenerSafeText({
     const parsed = parseCrisisRiskTag(raw);
 
     if (!parsed) {
+      const untaggedReply = raw.trim();
+      if (untaggedReply) {
+        const untaggedViolations = detectWarmListenerViolations(untaggedReply);
+        if (untaggedViolations.length === 0) {
+          return {
+            attempts: attempt,
+            risk: "LOW",
+            text: untaggedReply,
+            violations: [],
+          };
+        }
+      }
       invalidTagStreak += 1;
       if (invalidTagStreak >= 2) {
         break;

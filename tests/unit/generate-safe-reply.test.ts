@@ -24,7 +24,7 @@ test("模型标 HIGH 时返回 HIGH 与剥离标记后的正文", async () => {
   assert.doesNotMatch(result.text, /RISK/);
 });
 
-test("第一次未按格式输出时重试，第二次成功", async () => {
+test("普通正文没有风险标签时也保留逻辑回答", async () => {
   let calls = 0;
 
   const result = await generateWarmListenerSafeText({
@@ -39,18 +39,18 @@ test("第一次未按格式输出时重试，第二次成功", async () => {
     model: dummyModel,
   });
 
-  assert.equal(calls, 2);
+  assert.equal(calls, 1);
   assert.equal(result.risk, "LOW");
-  assert.equal(result.text, "别担心，我在呢。");
+  assert.equal(result.text, "没有标记的正文");
 });
 
-test("连续无标记时按 LOW 兜底并返回 fallback", async () => {
+test("连续空回复时才使用 fallback", async () => {
   let calls = 0;
 
   const result = await generateWarmListenerSafeText({
     generateImpl: () => {
       calls += 1;
-      return { text: "始终没有标记" };
+      return { text: "" };
     },
     instructions: "你是云朵。",
     messages: [],
