@@ -12,7 +12,7 @@ import {
 } from "./guardrails";
 
 export const WARM_LISTENER_FALLBACK_REPLY =
-  "听起来真的不容易。嗯，我在呢。你想说的话，可以慢慢说。";
+  "我刚才没能准确理解你的意思。你可以换一种说法，我会按你的问题认真回答。";
 
 type GenerateTextLike = (args: {
   instructions: string;
