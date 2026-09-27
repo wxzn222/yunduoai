@@ -78,7 +78,7 @@ export function Preview() {
           onClick={handleDefaultAction}
           type="button"
         >
-          Ask anything...
+          想聊点什么？
         </button>
       </div>
     </div>

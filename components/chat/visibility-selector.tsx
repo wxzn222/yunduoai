@@ -33,16 +33,16 @@ const visibilities: Array<{
   icon: ReactNode;
 }> = [
   {
-    description: "Only you can access this chat",
+    description: "只有你可以访问这段聊天",
     icon: <LockIcon />,
     id: "private",
-    label: "Private",
+    label: "仅自己可见",
   },
   {
-    description: "Anyone with the link can access this chat",
+    description: "任何拥有链接的人都可以访问这段聊天",
     icon: <GlobeIcon />,
     id: "public",
-    label: "Public",
+    label: "公开",
   },
 ];
 

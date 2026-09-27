@@ -3,7 +3,7 @@ export const DEFAULT_CHAT_MODEL = "qwen/qwen3.7-plus";
 export const titleModel = {
   description: "Qwen model for chat title generation",
   id: DEFAULT_CHAT_MODEL,
-  name: "Qwen3.7 Plus",
+  name: "千问 3.7 Plus",
   provider: "qwen",
 };
 
@@ -26,7 +26,7 @@ export const chatModels: ChatModel[] = [
   {
     description: "Qwen model for AI Yun Duo chat",
     id: DEFAULT_CHAT_MODEL,
-    name: "Qwen3.7 Plus",
+    name: "千问 3.7 Plus",
     provider: "qwen",
   },
 ];
