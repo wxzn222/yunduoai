@@ -135,7 +135,7 @@ export const VersionFooter = ({
             mode === "diff" && "bg-muted text-foreground"
           )}
           onClick={handleToggleMode}
-          title="Show changes"
+          title="查看更改"
           type="button"
         >
           <DiffIcon className="size-4" />

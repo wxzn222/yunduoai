@@ -184,8 +184,8 @@ function Sidebar({
           side="bottom"
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>Sidebar</SheetTitle>
-            <SheetDescription>Displays the mobile sidebar.</SheetDescription>
+            <SheetTitle>侧边栏</SheetTitle>
+            <SheetDescription>显示移动端侧边栏。</SheetDescription>
           </SheetHeader>
           <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-sidebar-foreground/20" />
           <div className="flex h-full w-full flex-col overflow-y-auto pt-2">{children}</div>
@@ -259,7 +259,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Toggle Sidebar</span>
+      <span className="sr-only">切换侧边栏</span>
     </Button>
   )
 }
@@ -278,14 +278,14 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     >
       <button
         data-sidebar="rail"
-        aria-label="Toggle Sidebar"
+        aria-label="切换侧边栏"
         tabIndex={-1}
         onClick={toggleSidebar}
         className="absolute inset-y-0 left-0 w-4 cursor-w-resize [[data-side=left][data-state=collapsed]_&]:cursor-e-resize"
         {...props}
       />
       <button
-        aria-label="Toggle Sidebar"
+        aria-label="切换侧边栏"
         tabIndex={-1}
         onClick={toggleSidebar}
         className={cn(
@@ -294,7 +294,7 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
         )}
       />
       <button
-        aria-label="Toggle Sidebar"
+        aria-label="切换侧边栏"
         tabIndex={-1}
         onClick={toggleSidebar}
         className={cn(

@@ -43,7 +43,7 @@ export function SidebarUserNav({ user }: { user: User }) {
   const handleAuthClick = useCallback(() => {
     if (status === "loading") {
       toast({
-        description: "Checking authentication status, please try again!",
+        description: "正在检查登录状态，请重试",
         type: "error",
       });
 
@@ -69,7 +69,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                 <div className="flex flex-row items-center gap-2">
                   <div className="size-6 animate-pulse rounded-full bg-sidebar-foreground/10" />
                   <span className="animate-pulse rounded-md bg-sidebar-foreground/10 text-transparent text-[13px]">
-                    Loading...
+                    加载中...
                   </span>
                 </div>
                 <div className="animate-spin text-sidebar-foreground/50">
@@ -88,7 +88,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                   }}
                 />
                 <span className="truncate text-[13px]" data-testid="user-email">
-                  {isGuest ? "Guest" : user?.email}
+                  {isGuest ? "访客" : user?.email}
                 </span>
                 <ChevronUp className="ml-auto size-3.5 text-sidebar-foreground/50" />
               </SidebarMenuButton>
@@ -104,7 +104,7 @@ export function SidebarUserNav({ user }: { user: User }) {
               data-testid="user-nav-item-theme"
               onSelect={handleThemeSelect}
             >
-              {`Toggle ${resolvedTheme === "light" ? "dark" : "light"} mode`}
+              {resolvedTheme === "light" ? "切换到深色模式" : "切换到浅色模式"}
             </DropdownMenuItem>
             {!isGuest && (
               <>
@@ -115,7 +115,7 @@ export function SidebarUserNav({ user }: { user: User }) {
                     onClick={handleAuthClick}
                     type="button"
                   >
-                    Sign out
+                    退出登录
                   </button>
                 </DropdownMenuItem>
               </>

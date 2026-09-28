@@ -25,10 +25,10 @@ export default function Page() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: router and updateSession are stable refs
   useEffect(() => {
     if (state.status === "failed") {
-      toast({ description: "Invalid credentials!", type: "error" });
+      toast({ description: "账号或密码错误", type: "error" });
     } else if (state.status === "invalid_data") {
       toast({
-        description: "Failed validating your submission!",
+        description: "提交内容校验失败",
         type: "error",
       });
     } else if (state.status === "success") {
@@ -45,19 +45,19 @@ export default function Page() {
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">欢迎回来</h1>
       <p className="text-sm text-muted-foreground">
-        Sign in to your account to continue
+        登录账号后继续
       </p>
       <AuthForm action={handleSubmit} defaultEmail={email}>
-        <SubmitButton isSuccessful={isSuccessful}>Sign in</SubmitButton>
+        <SubmitButton isSuccessful={isSuccessful}>登录</SubmitButton>
         <p className="text-center text-[13px] text-muted-foreground">
-          {"No account? "}
+          {"还没有账号？"}
           <Link
             className="text-foreground underline-offset-4 hover:underline"
             href="/register"
           >
-            Sign up
+            注册
           </Link>
         </p>
       </AuthForm>

@@ -176,7 +176,7 @@ function PureMultimodalInput({
           setMessages(() => []);
           break;
         case "rename":
-          toast("Rename is available from the sidebar chat menu.");
+      toast("可在侧边栏的对话菜单中重命名");
           break;
         case "model": {
           const modelBtn = document.querySelector<HTMLButtonElement>(
@@ -189,24 +189,24 @@ function PureMultimodalInput({
           setTheme(resolvedTheme === "dark" ? "light" : "dark");
           break;
         case "delete":
-          toast("Delete this chat?", {
+          toast("删除这条对话？", {
             action: {
-              label: "Delete",
+              label: "删除",
               onClick: () => {
                 fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/chat?id=${chatId}`,
                   { method: "DELETE" }
                 );
                 router.push("/");
-                toast.success("Chat deleted");
+                toast.success("对话已删除");
               },
             },
           });
           break;
         case "purge":
-          toast("Delete all chats?", {
+        toast("删除所有对话？", {
             action: {
-              label: "Delete all",
+            label: "全部删除",
               onClick: () => {
                 fetch(
                   `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/api/history`,
@@ -215,7 +215,7 @@ function PureMultimodalInput({
                   }
                 );
                 router.push("/");
-                toast.success("All chats deleted");
+                  toast.success("所有对话已删除");
               },
             },
           });
@@ -304,7 +304,7 @@ function PureMultimodalInput({
       const { error } = await response.json();
       toast.error(error);
     } catch {
-      toast.error("Failed to upload file, please try again!");
+      toast.error("文件上传失败，请重试");
     }
   }, []);
 
@@ -326,7 +326,7 @@ function PureMultimodalInput({
           ...successfullyUploadedAttachments,
         ]);
       } catch {
-        toast.error("Failed to upload files");
+        toast.error("文件上传失败");
       } finally {
         setUploadQueue([]);
       }
@@ -372,7 +372,7 @@ function PureMultimodalInput({
           ...(successfullyUploadedAttachments as Attachment[]),
         ]);
       } catch {
-        toast.error("Failed to upload pasted image(s)");
+        toast.error("粘贴的图片上传失败");
       } finally {
         setUploadQueue([]);
       }
@@ -417,7 +417,7 @@ function PureMultimodalInput({
     if (status === "ready" || status === "error") {
       submitForm();
     } else {
-      toast.error("Please wait for the model to finish its response!");
+      toast.error("请等待模型完成回复");
     }
   }, [attachments.length, handleSlashSelect, input, status, submitForm]);
 
@@ -469,7 +469,7 @@ function PureMultimodalInput({
     <div className={cn("relative flex w-full flex-col gap-4", className)}>
       {editingMessage && onCancelEdit ? (
         <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-          <span>Editing message</span>
+          <span>正在编辑消息</span>
           <button
             className="rounded px-1.5 py-0.5 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground"
             onMouseDown={handleCancelEditMouseDown}
@@ -756,19 +756,19 @@ function ModelSelectorOption({
         {capabilities?.[model.id]?.tools
           ? maybeWithTooltip(
               <WrenchIcon className="size-3.5" />,
-              "Supports tool use"
+              "支持工具调用"
             )
           : null}
         {capabilities?.[model.id]?.vision
           ? maybeWithTooltip(
               <EyeIcon className="size-3.5" />,
-              "Supports vision"
+              "支持图像理解"
             )
           : null}
         {capabilities?.[model.id]?.reasoning
           ? maybeWithTooltip(
               <BrainIcon className="size-3.5" />,
-              "Supports reasoning"
+              "支持深度思考"
             )
           : null}
         {!curated && <LockIcon className="size-3 text-muted-foreground/50" />}
@@ -894,7 +894,7 @@ function PureModelSelectorCompact({
               <ModelSelectorGroup
                 heading={
                   key === "_available"
-                    ? "Available"
+                    ? "可用"
                     : (providerNames[key] ?? key)
                 }
                 key={key}
