@@ -167,6 +167,14 @@ const memoryOpenings = [
     `之前我们聊到${summary.replace(/^最近聊到：/, "")}今天不用急，想到什么说什么。`,
 ];
 
+function compactOpeningSummary(summary: string): string {
+  const cleaned = summary
+    .replace(/^最近聊到：/, "")
+    .replace(/[。！？!?]+$/, "")
+    .trim();
+  return cleaned.length > 36 ? `${cleaned.slice(0, 36)}…` : cleaned;
+}
+
 export function buildOpeningMessage(
   memory: { isSensitive: boolean; summary: string } | null,
   variant = 0
@@ -176,6 +184,6 @@ export function buildOpeningMessage(
     return ordinaryOpenings[normalizedVariant % ordinaryOpenings.length];
   }
   return memoryOpenings[normalizedVariant % memoryOpenings.length](
-    memory.summary.trim()
+    compactOpeningSummary(memory.summary)
   );
 }

@@ -17,6 +17,4 @@ export const suggestions = [
   "今天心情不太好，但又说不上来为什么",
   "我最近总是睡不好，脑子停不下来",
   "你在吗？我想说说今天发生的事",
-  "Help me write an essay about Silicon Valley",
-  "What is the weather in San Francisco?",
 ];
